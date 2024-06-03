@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import math
 from abc import ABC, abstractmethod
 from sklearn.datasets import make_blobs, make_classification, make_gaussian_quantiles
 # implementing some base NN modules from scratch
@@ -93,7 +94,7 @@ class fcl(layer):
         self.update()
         return self.dA_prev
 
-    def update(self, lr=0.001):
+    def update(self, lr=0.01):
         # so class has it's own grads already
         # print("updating with grad", self.dW, self.W[0])
         # print("updating:", self.name, self.width, self.output_width)
@@ -131,8 +132,9 @@ class Network():
 
     def __init__(self):
         self.layers = [
-            fcl(784, 20, "relu", "relu layer"),
-            fcl(20, 10, "softmax", "softmax layer"),
+            fcl(784, 64, "relu", "relu layer"),
+            fcl(64, 32, "relu", "relu64layer"),
+            fcl(32, 10, "softmax", "softmax layer"),
         ]
 
     def forward(self, x, y):
@@ -178,8 +180,9 @@ if __name__ == "__main__":
     X, Y = load_data("data/train.csv")
     print("SHAPES:", X.shape, Y.shape)
     nn = Network()
+    losses = []
 
-    for it in range(200):
+    for it in range(2000):
         #for sample_idx in range(300):
         #y_pred, loss = nn.forward(x[sample_idx], y[sample_idx])
         y_pred, loss, loss_grad = nn.forward(X, Y)
@@ -188,6 +191,11 @@ if __name__ == "__main__":
         # print("sum sanity check:", y_pred.sum(axis=0))
         # print("loss:", loss, loss_grad.shape)
         print("loss:", loss.mean())
+        losses.append(loss.mean())
+        if math.isnan(loss.mean()):
+            print("NAN LOSS! Failed")
+            break
         # print(loss_grad, loss_grad.shape)
         # print(loss_grad.sum(axis=1).shape)
         nn.backward(loss_grad)
+        
