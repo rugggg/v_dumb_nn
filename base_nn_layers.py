@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import math
 from abc import ABC, abstractmethod
-from sklearn.datasets import make_blobs, make_classification, make_gaussian_quantiles
 # implementing some base NN modules from scratch
 
 class layer(ABC):
@@ -24,26 +23,6 @@ class net():
         self.layers = []
 
 
-class mult(layer):
-    def __init__(self):
-        self.dx = None
-        self.dy = None
-        self.x = None
-        self.y = None
-
-    def forward(self, x: np.array, y: np.array) -> np.array:
-        self.x = x
-        self.y = y
-        z = x*y
-        # if we have a gradient 
-        return z
-    
-    def backward(self, dz: np.array) -> list[np.array, np.array]:
-        dx = self.y * dz
-        dy = self.x * dz
-        return [dx, dy]
-
-
 class fcl(layer):
     """fully connected layer - keeping activation func seperate for now"""
     def __init__(self, width: int, output_width: int, activation="relu", name=None):
@@ -54,7 +33,6 @@ class fcl(layer):
         self.b = np.zeros((self.output_width,1))
         self.activation=activation
         self.name = name
-        # print(self.name, self.W.shape)
 
         self.x = None # hold the input to this layer
         self.activation_cache = None # hold the activation output
@@ -70,10 +48,6 @@ class fcl(layer):
         # then do the non-linearity activation function of choice on that linear activation output
         if self.activation == "relu":
             self.activation_cache = np.maximum(self.linear_cache, 0)
-            # print("XX:", self.x)
-            # print("x mean", x.mean())
-            # print("LIN CACHE:", self.linear_cache)
-            # print("ACT CACHE:", self.activation_cache)
         if self.activation == "softmax":
             self.activation_cache = softmax(self.linear_cache)
         return self.activation_cache
@@ -87,47 +61,25 @@ class fcl(layer):
             self.dz = grad
         if self.activation == "softmax":
             self.dz = grad
-            # self.dz = np.diag(self.activation_cache) - np.dot(self.activation_cache, self.activation_cache.T)
         # linear backward
         m = self.x.shape[1]
-        # print("dW calc inputs", self.name, self.dz.shape, self.x.T.shape)
-        # print("dW calc inputs DZ", self.dz)
-        # print("dW calc inputs x.T", self.x.T)
-
-        # print("self w shape:", self.W.shape)
-        # self.dW needs to be say (10,20) if self.W is (10,20)
-        # so to get that, we
-        # self.dW = 1/
-        # m * np.dot(self.dz, self.x.T) # is this right? self.x.T?
         self.dW = 1/m * np.dot(self.dz, self.x.T) # is this right? 
-        # print(self.dW)
-        # print("*****")
         self.db = 1/m * np.sum(self.dz, axis=1, keepdims=True)
         self.dA_prev = np.dot(self.W.T, self.dz)
         self.update()
         return self.dA_prev
 
     def update(self, lr=0.1):
-        # so class has it's own grads already
-        # print("updating with grad", self.dW, self.W[0])
-        # print("updating:", self.name, self.width, self.output_width)
-        # print(self.W.shape, self.dW.shape)
-        # print(self.b.shape, self.db.shape)
         assert self.W.shape == self.dW.shape
         assert self.b.shape == self.db.shape
-        # print("DW max", self.dW.max(), self.dW.min())
-        self.W = self.W - self.dW*lr # bc the dW is always 0 - suspect bc the calc on line 91
-        self.b = self.b - self.db*lr # hm only bias is training
-        # print("set with grad", self.W[0])
-
+        self.W = self.W - self.dW*lr 
+        self.b = self.b - self.db*lr 
     
-
-# def ce_loss(y_pred, y_target):
-#     return -np.sum(y_target * np.log(y_pred))/ y_target.shape[0]
 
 def softmax(x):
     """Compute the softmax of vector x. on input that is shape (feat, batch), hence axis=0"""
     return np.exp(x) / np.sum(np.exp(x), axis=0, keepdims=True)
+
 
 def cross_entropy(y_true, y_pred):
     """
@@ -136,10 +88,6 @@ def cross_entropy(y_true, y_pred):
     """
     assert y_true.shape == y_pred.shape
     return -np.sum(y_true * np.log(y_pred), axis=0)
-
-#def cross_entropy_grad(y_true, y_pred):
-#    """Compute the gradient of the cross-entropy loss function."""
-#    return -y_true / (y_pred + 10**-100)
 
 
 class Network():
@@ -156,32 +104,20 @@ class Network():
         for idx, l in enumerate(self.layers):
             curr_input = self.layers[idx].forward(curr_input)
         l = cross_entropy(y, curr_input)
-        # print(curr_input.shape, y.shape)
-        # l_grad = cross_entropy_grad(y, curr_input)
         l_grad = curr_input - y
         return curr_input, l, l_grad
 
     def backward(self, loss_grad):
-        # print("----backprop----")
         grad = loss_grad
-        # print("INITIAL GRAD:", loss_grad.shape)
-        # print(loss_grad)
-        # print(loss_grad[:, 0])
         for l in reversed(self.layers):
-            # print("grad:", grad.max(), grad.min())
             if l.activation == "softmax":
                 grad = l.backward(grad)
-                # print("GRAD after softmax:", grad[:, 0])
             else:
                 grad = l.backward(grad)
 
 
 def load_data(train_file, test_file=None):
     raw = np.loadtxt(train_file, skiprows=1, dtype='int', delimiter=',')
-    # print (raw.shape)
-
-    #raw_test = np.loadtxt(test_file, skiprows=1, dtype='int', delimiter=',')
-    #print (raw_test.shape)
 
     Y = raw[:,0]     # first column of raw data are image labels
     X = raw[:,1:785]   # rest of the pixel data is in columns 1 to 785
@@ -189,7 +125,6 @@ def load_data(train_file, test_file=None):
 
     train_x = (X.T)/255.
     train_y = Y.T
-    # targets = labels.to_numpy.reshape(-1)
     y_train_hot = np.squeeze(np.eye(10)[train_y])
     return train_x, y_train_hot.T
 
@@ -202,21 +137,11 @@ if __name__ == "__main__":
     losses = []
 
     for it in range(200):
-        #for sample_idx in range(300):
-        #y_pred, loss = nn.forward(x[sample_idx], y[sample_idx])
-        y_pred, loss, loss_grad = nn.forward(X, Y)#[:,:2], Y[:,:2])
-        #for yy in range(y_pred.shape[1]):
-        #    assert y_pred[:, yy].sum() == 1
-        # print("sum sanity check:", y_pred.sum(axis=0))
-        # print("loss:", loss, loss_grad.shape)
-        # print("Y_PRED:", y_pred)
+
+        y_pred, loss, loss_grad = nn.forward(X, Y)
         print("loss:", loss.mean())
         losses.append(loss.mean())
         if math.isnan(loss.mean()):
             print("NAN LOSS! Failed")
             break
-        # print("loss_grad:", loss_grad, loss_grad.shape)
-        # print(loss_grad.sum(axis=1).shape)
-        nn.backward(loss_grad)
-        # print(nn.layers[-1].W)
-        
+        nn.backward(loss_grad)        
