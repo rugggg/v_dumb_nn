@@ -55,12 +55,12 @@ class fcl(layer):
         self.name = name
         print(self.name, self.W.shape)
 
-        self.x = None # hold the input, probably dont need
+        self.x = None # hold the input to this layer
         self.activation_cache = None # hold the activation output
         self.linear_cache = None # hold the linear layer output before activation
         self.dW = None # derivative wrt weights
         self.db = None # derivative wrt bias
-        self.dz = None # derivative from upstream layers and originally the loss
+        self.dz = None # derivative from upstream layers
 
     def forward(self, x: np.array):
         self.x = x # hold the inputs to this layer for backprop
@@ -70,10 +70,7 @@ class fcl(layer):
         if self.activation == "relu":
             self.activation_cache = np.maximum(self.linear_cache, 0)
         if self.activation == "softmax":
-            # self.activation_cache =  np.exp(self.linear_cache)/np.sum(np.exp(self.linear_cache))
-            print("LCACHE SHAPE:", self.linear_cache.shape)
             self.activation_cache = softmax(self.linear_cache)
-            print("AC shape", self.activation_cache.shape)
         return self.activation_cache
 
     def backward(self, grad: np.array):
@@ -84,22 +81,24 @@ class fcl(layer):
             grad[self.activation_cache <= 0] = 0 # maybe need copy here?
             self.dz = grad
         if self.activation == "softmax":
-            self.dz = np.diag(self.activation_cache) - np.dot(self.activation_cache, self.activation_cache.T)
+            self.dz = grad
+            # self.dz = np.diag(self.activation_cache) - np.dot(self.activation_cache, self.activation_cache.T)
         # linear backward
-        print(self.linear_cache.shape[0])
-        m = self.linear_cache.shape[0]
-
-        self.dW = 1/m * np.dot(self.dz, self.linear_cache.T)
-        print("dW calc inputs", self.name, self.dz.shape, self.linear_cache.shape)
-        self.db = 1/m * np.sum(self.dz, keepdims=True)
+        m = self.x.shape[1]
+        # print("dW calc inputs", self.name, self.dz.shape, self.linear_cache.shape)
+        # print("self w shape:", self.W.shape)
+        self.dW = 1/m * np.dot(self.dz, self.x.T) # is this right? self.x.T?
+        self.db = 1/m * np.sum(self.dz, axis=1, keepdims=True)
         self.dA_prev = np.dot(self.W.T, self.dz)
         self.update()
         return self.dA_prev
 
-    def update(self, lr=1.1):
+    def update(self, lr=0.001):
         # so class has it's own grads already
         # print("updating with grad", self.dW, self.W[0])
-        print(self.name, self.width, self.output_width)
+        # print("updating:", self.name, self.width, self.output_width)
+        # print(self.W.shape, self.dW.shape)
+        # print(self.b.shape, self.db.shape)
         assert self.W.shape == self.dW.shape
         assert self.b.shape == self.db.shape
         self.W = self.W - self.dW*lr
@@ -135,21 +134,21 @@ class Network():
             fcl(784, 20, "relu", "relu layer"),
             fcl(20, 10, "softmax", "softmax layer"),
         ]
-        # self.loss = ce_loss
 
     def forward(self, x, y):
         curr_input = x
         for idx, l in enumerate(self.layers):
             curr_input = self.layers[idx].forward(curr_input)
         l = cross_entropy(y, curr_input)
-        l_grad = cross_entropy_grad(y, curr_input)
-        #l = self.loss(curr_input, y)
+        # print(curr_input.shape, y.shape)
+        l_grad = cross_entropy_grad(y, curr_input) 
         return curr_input, l, l_grad
 
     def backward(self, loss_grad):
-        print("----backprop----")
+        # print("----backprop----")
         grad = loss_grad
         for l in reversed(self.layers):
+            # print("grad:", grad.shape)
             if l.activation == "softmax":
                 grad = l.backward(grad)
             else:
@@ -158,7 +157,7 @@ class Network():
 
 def load_data(train_file, test_file=None):
     raw = np.loadtxt(train_file, skiprows=1, dtype='int', delimiter=',')
-    print (raw.shape)
+    # print (raw.shape)
 
     #raw_test = np.loadtxt(test_file, skiprows=1, dtype='int', delimiter=',')
     #print (raw_test.shape)
@@ -180,13 +179,15 @@ if __name__ == "__main__":
     print("SHAPES:", X.shape, Y.shape)
     nn = Network()
 
-    for it in range(10):
+    for it in range(200):
         #for sample_idx in range(300):
         #y_pred, loss = nn.forward(x[sample_idx], y[sample_idx])
         y_pred, loss, loss_grad = nn.forward(X, Y)
         #for yy in range(y_pred.shape[1]):
         #    assert y_pred[:, yy].sum() == 1
-        print("sum sanity check:", y_pred.sum(axis=0))
-        print("loss:", loss, loss_grad.shape)
-        print(loss_grad, loss_grad.shape)
+        # print("sum sanity check:", y_pred.sum(axis=0))
+        # print("loss:", loss, loss_grad.shape)
+        print("loss:", loss.mean())
+        # print(loss_grad, loss_grad.shape)
+        # print(loss_grad.sum(axis=1).shape)
         nn.backward(loss_grad)
