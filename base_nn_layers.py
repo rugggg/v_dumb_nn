@@ -1,6 +1,6 @@
 import numpy as np
-import pandas as pd
 import math
+import plotext as plt
 from abc import ABC, abstractmethod
 # implementing some base NN modules from scratch
 
@@ -128,20 +128,24 @@ def load_data(train_file, test_file=None):
     y_train_hot = np.squeeze(np.eye(10)[train_y])
     return train_x, y_train_hot.T
 
-if __name__ == "__main__":
-    
 
+
+if __name__ == "__main__":
     X, Y = load_data("data/train.csv")
-    print("SHAPES:", X.shape, Y.shape)
     nn = Network()
     losses = []
 
     for it in range(200):
 
         y_pred, loss, loss_grad = nn.forward(X, Y)
-        print("loss:", loss.mean())
+        print("loss:", loss.mean(), end='\r')
         losses.append(loss.mean())
         if math.isnan(loss.mean()):
             print("NAN LOSS! Failed")
             break
         nn.backward(loss_grad)        
+    plt.theme("sahara")
+    plt.plot_size(100, 30)
+    plt.plot(losses, )
+    plt.title("Training Loss per Epoch")
+    plt.show()
