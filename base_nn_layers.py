@@ -129,6 +129,15 @@ def load_data(train_file, test_file=None):
     return train_x, y_train_hot.T
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+                    prog='A rather poor implementation of a basic Fully Connected NN for MNIST',
+                    description='You can train, or you can run a prediction on a saved model',
+                    epilog='Text at the bottom of help'
+            )
+    parser.add_argument('-m', '--mode', options=['train', 'predict'])  # on/off flag
+
+
 
 if __name__ == "__main__":
     X, Y = load_data("data/train.csv")
