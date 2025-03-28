@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v_dumb_nn"
+version = "0.1.0"
+description = "A basic neural network implemented in pure NumPy and JAX"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "Doug Woodward"}
+]
+
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.2",
+    "scipy==1.13.1",
+    "plotext==5.2.8",
+    "jax==0.4.26",
+    "jaxlib==0.4.26",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.2.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = ["E", "F", "B", "I", "W", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.pytest]
+testpaths = ["tests"]
+python_files = "test_*.py"
