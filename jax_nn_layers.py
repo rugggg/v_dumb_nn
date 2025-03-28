@@ -147,26 +147,71 @@ def load_data_jax(train_file: str) -> Tuple[jnp.ndarray, jnp.ndarray]:
     return train_x, y_train_hot.T
 
 
+def plot_losses(losses, step, total_steps):
+    plt.clear_terminal()
+    plt.clear_data()
+    plt.theme("sahara")
+    plt.plot_size(100, 30)
+    
+    # Create x-axis values for steps
+    x_values = list(range(1, len(losses) + 1))
+    
+    # Set axis limits to show a good view of the data
+    y_min = min(losses) * 0.9 if losses else 0
+    y_max = max(losses) * 1.1 if losses else 3
+    plt.xlim(1, total_steps)
+    plt.ylim(y_min, y_max)
+    
+    # Plot with labels and grid
+    plt.plot(x_values, losses)
+    plt.grid(True)
+    plt.xlabel("Training Steps")
+    plt.ylabel("Loss")
+    plt.title(f"Training Loss per Epoch (Step {step}/{total_steps})")
+    plt.show()
+
 if __name__ == "__main__":
     X, Y = load_data_jax("data/train.csv")
     nn = JaxNetwork()
     losses = []
+    total_steps = 200
     
-    for it in range(200):
+    for it in range(total_steps):
         y_pred, loss, loss_grad = nn.forward(X, Y)
         mean_loss = jnp.mean(loss).item()
         
-        print(f"loss: {mean_loss}", end='\r')
+        print(f"loss: {mean_loss:.6f} (Step {it+1}/{total_steps})", end='\r')
         losses.append(mean_loss)
         
         if math.isnan(mean_loss):
-            print("NAN LOSS! Failed")
+            print("\nNAN LOSS! Failed")
             break
             
         nn.backward(loss_grad)
         
+        # Show plot every 5 steps
+        if (it + 1) % 5 == 0 or it == 0 or it == total_steps - 1:
+            plot_losses(losses, it + 1, total_steps)
+    
+    # Final plot with enhanced visualization
+    plt.clear_terminal()
+    plt.clear_data()
     plt.theme("sahara")
     plt.plot_size(100, 30)
-    plt.plot(losses)
-    plt.title("Training Loss per Epoch (JAX Implementation)")
+    
+    # Create x-axis values for steps
+    x_values = list(range(1, len(losses) + 1))
+    
+    # Set axis limits for final plot
+    y_min = min(losses) * 0.9
+    y_max = max(losses) * 1.1
+    plt.xlim(1, len(losses))
+    plt.ylim(y_min, y_max)
+    
+    # Plot with labels and grid
+    plt.plot(x_values, losses)
+    plt.grid(True)
+    plt.xlabel("Training Steps")
+    plt.ylabel("Loss")
+    plt.title("Final Training Loss per Epoch (JAX Implementation)")
     plt.show()

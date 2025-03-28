@@ -139,22 +139,70 @@ def parse_args():
 
 
 
+def plot_losses(losses, step, total_steps):
+    plt.clear_terminal()
+    plt.clear_data()
+    plt.theme("sahara")
+    plt.plot_size(100, 30)
+    
+    # Create x-axis values for steps
+    x_values = list(range(1, len(losses) + 1))
+    
+    # Set axis limits to show a good view of the data
+    y_min = min(losses) * 0.9 if losses else 0
+    y_max = max(losses) * 1.1 if losses else 3
+    plt.xlim(1, total_steps)
+    plt.ylim(y_min, y_max)
+    
+    # Plot with labels and grid
+    plt.plot(x_values, losses)
+    plt.grid(True)
+    plt.xlabel("Training Steps")
+    plt.ylabel("Loss")
+    plt.title(f"Training Loss per Epoch (Step {step}/{total_steps})")
+    plt.show()
+
 if __name__ == "__main__":
     X, Y = load_data("data/train.csv")
     nn = Network()
     losses = []
+    total_steps = 200
 
-    for it in range(200):
-
+    for it in range(total_steps):
         y_pred, loss, loss_grad = nn.forward(X, Y)
-        print("loss:", loss.mean(), end='\r')
-        losses.append(loss.mean())
-        if math.isnan(loss.mean()):
-            print("NAN LOSS! Failed")
+        current_loss = loss.mean()
+        print(f"loss: {current_loss:.6f} (Step {it+1}/{total_steps})", end='\r')
+        losses.append(current_loss)
+        
+        if math.isnan(current_loss):
+            print("\nNAN LOSS! Failed")
             break
-        nn.backward(loss_grad)        
+            
+        nn.backward(loss_grad)
+        
+        # Show plot every 5 steps
+        if (it + 1) % 5 == 0 or it == 0 or it == total_steps - 1:
+            plot_losses(losses, it + 1, total_steps)
+    
+    # Final plot with enhanced visualization
+    plt.clear_terminal()
+    plt.clear_data()
     plt.theme("sahara")
     plt.plot_size(100, 30)
-    plt.plot(losses, )
-    plt.title("Training Loss per Epoch")
+    
+    # Create x-axis values for steps
+    x_values = list(range(1, len(losses) + 1))
+    
+    # Set axis limits for final plot
+    y_min = min(losses) * 0.9
+    y_max = max(losses) * 1.1
+    plt.xlim(1, len(losses))
+    plt.ylim(y_min, y_max)
+    
+    # Plot with labels and grid
+    plt.plot(x_values, losses)
+    plt.grid(True)
+    plt.xlabel("Training Steps")
+    plt.ylabel("Loss")
+    plt.title("Final Training Loss per Epoch (NumPy Implementation)")
     plt.show()
